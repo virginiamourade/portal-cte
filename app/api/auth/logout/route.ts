@@ -1,0 +1,2 @@
+import {supabase} from '../../../../lib/supabase/server';
+export async function POST(req:Request){if(req.headers.get('Origin')!==new URL(req.url).origin)return Response.json({error:'Origem inválida.'},{status:403});try{const c=await supabase();await c.auth.signOut();return new Response(null,{status:303,headers:{Location:'/login','Cache-Control':'no-store'}});}catch{return Response.json({error:'Não foi possível sair. Tente novamente.'},{status:503});}}

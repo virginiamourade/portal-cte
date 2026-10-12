@@ -1,0 +1,5 @@
+import {authorize} from '../../../lib/auth';
+import {failure} from '../../../lib/storage';
+export const dynamic='force-dynamic';
+export async function GET(req:Request){const a=await authorize(req);if(a instanceof Response)return a;try{const {data,error}=await a.client.from('settings').select('data').eq('owner_id',a.user.id).eq('id','company').maybeSingle();if(error)return failure();return Response.json({settings:{uf:'SP',regime:'Simples Nacional',integration:'direct-sefaz',certificateType:'A1',...data?.data}},{headers:{'Cache-Control':'no-store'}});}catch{return failure();}}
+export async function POST(req:Request){const a=await authorize(req,true);if(a instanceof Response)return a;try{const raw=await req.text();if(raw.length>30000)return Response.json({error:'Dados muito grandes.'},{status:400});const b=JSON.parse(raw);if(!b||typeof b!=='object'||Array.isArray(b))return Response.json({error:'Dados inválidos.'},{status:400});const {error}=await a.client.from('settings').upsert({id:'company',owner_id:a.user.id,data:b},{onConflict:'owner_id,id'});return error?failure():Response.json({ok:true});}catch{return failure();}}

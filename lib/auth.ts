@@ -1,0 +1,5 @@
+import 'server-only';
+import {supabase,isConfigured} from './supabase/server';
+export {isConfigured};
+export async function access(){const client=await supabase();const {data,error}=await client.auth.getUser();if(error||!data.user)return null;const {data:member,error:denied}=await client.from('authorized_users').select('user_id').eq('user_id',data.user.id).eq('enabled',true).maybeSingle();if(denied)throw Error('Verifique a instalação do banco de dados.');return member?{client,user:data.user}:null;}
+export async function authorize(req:Request,write=false){if(write&&req.headers.get('Origin')!==new URL(req.url).origin)return Response.json({error:'Origem inválida.'},{status:403});if(!isConfigured())return Response.json({error:'Configure o Supabase na hospedagem.'},{status:503});try{const a=await access();return a||Response.json({error:'Faça login com um usuário autorizado.'},{status:401,headers:{'Cache-Control':'no-store'}});}catch{return Response.json({error:'Não foi possível validar o acesso. Verifique o Supabase.'},{status:503});}}

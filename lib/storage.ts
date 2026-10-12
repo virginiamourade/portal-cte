@@ -1,0 +1,1 @@
+export function failure(){return Response.json({error:'Não foi possível acessar os dados. Verifique a configuração do Supabase; seu formulário foi preservado.'},{status:503,headers:{'Cache-Control':'no-store'}});}
