@@ -1,4 +1,12 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {draft,imported} from '../lib/documents.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import {draft,imported,templateFromXml} from '../lib/documents.mjs';
 test('rascunhos não podem fabricar autorização',()=>{const r=draft({environment:'test',recipient:'Cliente',value:10,status:'authorized',key:'falsa',protocol:'falso',id:'falso'});assert.equal(r.status,'draft');for(const k of ['key','protocol','id'])assert.equal(r[k],undefined);assert.throws(()=>draft({environment:'test',recipient:'Cliente',value:-1}));});
 const key='1'.repeat(44);const xml=(amb='2',protocolAmb='2',status='100')=>`<cteProc><CTe><infCte Id="CTe${key}"><ide><tpAmb>${amb}</tpAmb><nCT>1</nCT><serie>1</serie></ide><vPrest><vTPrest>10</vTPrest></vPrest></infCte></CTe><protCTe><infProt><tpAmb>${protocolAmb}</tpAmb><cStat>${status}</cStat><chCTe>${key}</chCTe><nProt>123</nProt></infProt></protCTe></cteProc>`;
 test('importação exige chave, protocolo e ambiente correspondentes',()=>{assert.equal(imported(xml()).status,'imported');assert.equal(imported(xml()).environment,'test');assert.throws(()=>imported(xml('2','1')));assert.throws(()=>imported(xml('2','2','999')));assert.throws(()=>imported(xml().replace(`Id="CTe${key}"`,'Id="CTe123"')));assert.throws(()=>imported('<!DOCTYPE foo>'+xml()));assert.throws(()=>imported('x'.repeat(2000001)));});
+
+test('modelo reutiliza participantes e limpa dados exclusivos da operação original',()=>{
+ const source=xml().replace('<nCT>1</nCT>','<nCT>1</nCT><modal>01</modal><tpCTe>0</tpCTe><tpServ>0</tpServ><toma3><toma>0</toma></toma3><cMunIni>3106200</cMunIni><UFIni>MG</UFIni>').replace('</ide>','</ide><rem><xNome>Cliente exemplo</xNome><CNPJ>12345678000195</CNPJ><enderReme><xMun>Exemplo</xMun><cMun>3106200</cMun><UF>MG</UF></enderReme></rem><infCTeNorm><infCarga><vCarga>1000</vCarga><proPred>Mercadoria</proPred></infCarga><infDoc><infNFe><chave>antiga</chave></infNFe></infDoc></infCTeNorm>');
+ const data=templateFromXml(source);assert.equal(data.environment,'test');assert.equal(data.taker,'Remetente');assert.equal(data.sender,'Cliente exemplo');assert.equal(data.senderCityCode,'3106200');assert.equal(data.originUF,'MG');
+ for(const name of ['number','value','receivable','cargoValue','nfe','weight','notes'])assert.equal(data[name],'');
+ for(const name of ['key','protocol','id'])assert.equal(data[name],undefined);
+ assert.throws(()=>templateFromXml(source.replace('<modal>01</modal>','<modal>02</modal>')));
+});
